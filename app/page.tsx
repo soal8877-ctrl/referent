@@ -8,6 +8,38 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [activeButton, setActiveButton] = useState<string | null>(null)
 
+  const handleParse = async () => {
+    if (!url.trim()) {
+      alert('Пожалуйста, введите URL статьи')
+      return
+    }
+
+    setLoading(true)
+    setResult('')
+
+    try {
+      const response = await fetch('/api/parse', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Ошибка парсинга')
+      }
+
+      const data = await response.json()
+      setResult(JSON.stringify(data, null, 2))
+    } catch (error) {
+      setResult(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSubmit = async (action: 'summary' | 'thesis' | 'telegram') => {
     if (!url.trim()) {
       alert('Пожалуйста, введите URL статьи')
@@ -18,12 +50,32 @@ export default function Home() {
     setActiveButton(action)
     setResult('')
 
-    // Здесь будет логика обработки
-    // Пока что просто имитация загрузки
-    setTimeout(() => {
-      setResult(`Результат для действия "${action}" будет здесь...`)
+    // Сначала парсим статью
+    try {
+      const response = await fetch('/api/parse', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Ошибка парсинга')
+      }
+
+      const data = await response.json()
+      // Показываем результат парсинга
+      setResult(JSON.stringify(data, null, 2))
+      
+      // Здесь будет логика обработки AI (пока просто показываем парсинг)
+      // TODO: Добавить обработку AI для каждого типа действия
+    } catch (error) {
+      setResult(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`)
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
   }
 
   return (
@@ -46,6 +98,17 @@ export default function Home() {
             placeholder="https://example.com/article"
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
           />
+        </div>
+
+        {/* Кнопка парсинга */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <button
+            onClick={handleParse}
+            disabled={loading}
+            className="w-full px-6 py-3 bg-gray-600 text-white rounded-md font-medium hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Парсинг...' : 'Распарсить статью'}
+          </button>
         </div>
 
         {/* Кнопки действий */}
@@ -100,7 +163,7 @@ export default function Home() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             ) : result ? (
-              <p className="text-gray-700 whitespace-pre-wrap">{result}</p>
+              <pre className="text-gray-700 whitespace-pre-wrap text-sm overflow-auto max-h-[600px]">{result}</pre>
             ) : (
               <p className="text-gray-400 text-center">Результат появится здесь после обработки</p>
             )}
