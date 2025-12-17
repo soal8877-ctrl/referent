@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type * as cheerio from 'cheerio'
 
 export async function POST(request: NextRequest) {
   try {
@@ -94,8 +95,19 @@ export async function POST(request: NextRequest) {
     for (const selector of contentSelectors) {
       const found = $(selector).first()
       if (found.length) {
-        // Удаляем ненужные элементы (скрипты, стили, реклама)
-        found.find('script, style, nav, header, footer, aside, .ad, .advertisement, [class*="ad"]').remove()
+        // Удаляем все ненужные элементы (скрипты, стили, навигация, реклама, формы и т.д.)
+        const elementsToRemove = 'script, style, nav, header, footer, aside, .ad, .advertisement, [class*="ad"], [id*="ad"], form, button, input, select, textarea, .menu, .navigation, .sidebar, .widget, .social, .share, .comments, .related, iframe, embed, object, video, audio, [class*="menu"], [class*="nav"], [class*="widget"], [class*="social"], [class*="share"], [class*="comment"], [style], [class*="style"], [class*="css"], [id*="style"], [id*="css"]'
+        found.find(elementsToRemove).remove()
+        
+        // Удаляем все элементы с inline стилями
+        found.find('*').each((_: number, element: cheerio.Element) => {
+          const $el = $(element)
+          if ($el.attr('style') || $el.hasClass('style') || $el.hasClass('css')) {
+            $el.remove()
+          }
+        })
+        
+        // Извлекаем только текстовый контент (метод .text() автоматически удаляет все HTML теги)
         content = found.text().trim()
         if (content && content.length > 100) {
           break
@@ -107,15 +119,62 @@ export async function POST(request: NextRequest) {
     if (!content || content.length < 100) {
       const mainContent = $('main').first()
       if (mainContent.length) {
-        mainContent.find('script, style, nav, header, footer, aside, .ad').remove()
+        const elementsToRemove = 'script, style, nav, header, footer, aside, .ad, .advertisement, [class*="ad"], [id*="ad"], form, button, input, select, textarea, .menu, .navigation, .sidebar, .widget, .social, .share, .comments, .related, iframe, embed, object, video, audio, [style], [class*="style"], [class*="css"]'
+        mainContent.find(elementsToRemove).remove()
+        
+        // Удаляем все элементы с inline стилями
+        mainContent.find('*').each((_: number, element: cheerio.Element) => {
+          const $el = $(element)
+          if ($el.attr('style') || $el.hasClass('style') || $el.hasClass('css')) {
+            $el.remove()
+          }
+        })
+        
         content = mainContent.text().trim()
       }
     }
 
-    // Очищаем контент от лишних пробелов и переносов строк
+    // Очищаем контент от CSS кода и лишних символов
     content = content
-      .replace(/\s+/g, ' ')
-      .replace(/\n\s*\n/g, '\n')
+      // Удаляем CSS паттерны
+      .replace(/:host\([^)]*\)/g, '')           // :host(...)
+      .replace(/:host\s*\{[^}]*\}/g, '')        // :host { ... }
+      .replace(/::slotted\([^)]*\)/g, '')       // ::slotted(...)
+      .replace(/@media\s*\([^)]*\)\s*\{[^}]*\}/g, '') // @media(...) { ... }
+      .replace(/@[a-z-]+\s*\{[^}]*\}/g, '')     // @правило { ... }
+      .replace(/\[part~="[^"]*"\]/g, '')        // [part~="..."]
+      .replace(/\[part="[^"]*"\]/g, '')         // [part="..."]
+      .replace(/\[role="[^"]*"\]/g, '')         // [role="..."]
+      .replace(/[a-z-]+\s*\{[^}]*\}/g, '')      // селектор { ... }
+      .replace(/--[a-z-]+:\s*[^;]+;/g, '')       // CSS переменные --var: value;
+      .replace(/var\(--[^)]+\)/g, '')           // var(--...)
+      .replace(/calc\([^)]+\)/g, '')            // calc(...)
+      .replace(/rgb\([^)]+\)/g, '')             // rgb(...)
+      .replace(/rgba\([^)]+\)/g, '')            // rgba(...)
+      .replace(/#[0-9a-f]{3,6}/gi, '')          // hex цвета
+      .replace(/[a-z-]+:\s*[^;]+;/g, '')        // свойство: значение;
+      .replace(/\s+/g, ' ')                     // Заменяем множественные пробелы на один
+      .replace(/\n\s*\n\s*\n/g, '\n\n')         // Удаляем множественные переносы строк
+      .replace(/&nbsp;/g, ' ')                  // Заменяем HTML сущности
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&[a-z]+;/gi, '')                // Удаляем остальные HTML сущности
+      // Удаляем строки, которые выглядят как CSS (содержат только CSS синтаксис)
+      .split('\n')
+      .filter(line => {
+        const trimmed = line.trim()
+        // Пропускаем строки, которые выглядят как CSS
+        if (!trimmed || trimmed.length === 0) return false
+        if (/^[:@#\[].*\{.*\}$/.test(trimmed)) return false // CSS селекторы
+        if (/^[a-z-]+:\s*[^;]+;$/.test(trimmed)) return false // CSS свойства
+        if (/^--[a-z-]+:/.test(trimmed)) return false // CSS переменные
+        if (/^@[a-z]+/.test(trimmed)) return false // @правила
+        return true
+      })
+      .join('\n')
       .trim()
 
     return NextResponse.json({
