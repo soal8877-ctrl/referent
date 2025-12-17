@@ -1,6 +1,7 @@
 # Referent
 
-Минимальное приложение на Next.js с TypeScript.
+Референт - переводчик с ИИ-обработкой
+PROJECT.MD - описание проекта
 
 ## Установка
 
@@ -57,3 +58,4 @@ npm start
 ```powershell
 pnpm start
 ```
+
