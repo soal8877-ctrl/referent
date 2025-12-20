@@ -105,9 +105,9 @@ export default function Home() {
     setActiveButton(action)
     setResult('')
 
-    // Сначала парсим статью
     try {
-      const response = await fetch('/api/parse', {
+      // Шаг 1: Парсим статью
+      const parseResponse = await fetch('/api/parse', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,19 +115,48 @@ export default function Home() {
         body: JSON.stringify({ url }),
       })
 
-      if (!response.ok) {
-        const error = await response.json()
+      if (!parseResponse.ok) {
+        const error = await parseResponse.json()
         throw new Error(error.error || 'Ошибка парсинга')
       }
 
-      const data = await response.json()
-      // Показываем результат парсинга
-      setResult(JSON.stringify(data, null, 2))
+      const parseData = await parseResponse.json()
       
-      // Здесь будет логика обработки AI (пока просто показываем парсинг)
-      // TODO: Добавить обработку AI для каждого типа действия
+      // Шаг 2: Валидация наличия контента после парсинга
+      if (!parseData.content || parseData.content === 'Контент не найден') {
+        throw new Error('Не удалось извлечь контент статьи. Проверьте URL и попробуйте снова.')
+      }
+
+      // Шаг 3: Отправляем контент в API для AI-обработки
+      const aiResponse = await fetch('/api/ai-process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          content: parseData.content,
+          action: action,
+        }),
+      })
+
+      if (!aiResponse.ok) {
+        const error = await aiResponse.json()
+        throw new Error(error.error || 'Ошибка AI-обработки')
+      }
+
+      const aiData = await aiResponse.json()
+      
+      // Шаг 4: Выводим результат AI-обработки в поле "Результат"
+      if (!aiData.result) {
+        throw new Error('Результат AI-обработки не получен')
+      }
+
+      setResult(aiData.result)
     } catch (error) {
-      setResult(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`)
+      // Обработка ошибок с понятными сообщениями
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
+      setResult(`Ошибка: ${errorMessage}`)
+      console.error('Ошибка обработки:', error)
     } finally {
       setLoading(false)
     }
