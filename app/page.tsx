@@ -9,38 +9,6 @@ export default function Home() {
   const [activeButton, setActiveButton] = useState<string | null>(null)
   const [processingStage, setProcessingStage] = useState<'parsing' | 'ai' | null>(null)
 
-  const handleParse = async () => {
-    if (!url.trim()) {
-      alert('Пожалуйста, введите URL статьи')
-      return
-    }
-
-    setLoading(true)
-    setResult('')
-
-    try {
-      const response = await fetch('/api/parse', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Ошибка парсинга')
-      }
-
-      const data = await response.json()
-      setResult(JSON.stringify(data, null, 2))
-    } catch (error) {
-      setResult(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleTranslate = async () => {
     if (!url.trim()) {
       alert('Пожалуйста, введите URL статьи')
@@ -193,17 +161,6 @@ export default function Home() {
             placeholder="https://example.com/article"
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
           />
-        </div>
-
-        {/* Кнопка парсинга */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <button
-            onClick={handleParse}
-            disabled={loading}
-            className="w-full px-6 py-3 bg-gray-600 text-white rounded-md font-medium hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Парсинг...' : 'Распарсить статью'}
-          </button>
         </div>
 
         {/* Кнопки действий */}
