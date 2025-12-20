@@ -54,6 +54,7 @@ export default function Home() {
         body: JSON.stringify({ 
           content: parseData.content,
           action: action,
+          sourceUrl: action === 'telegram' ? url : undefined, // Передаем URL только для telegram
         }),
       })
 

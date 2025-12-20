@@ -55,13 +55,14 @@ async function processLongContent(
   content: string,
   action: ActionType,
   apiKey: string,
-  promptConfig: PromptConfig
+  promptConfig: PromptConfig,
+  sourceUrl?: string
 ): Promise<string> {
   const chunks = splitContent(content)
   
   if (chunks.length === 1) {
     // Если контент короткий, обрабатываем как обычно
-    return await callOpenRouterAPI(chunks[0], action, apiKey, promptConfig)
+    return await callOpenRouterAPI(chunks[0], action, apiKey, promptConfig, sourceUrl)
   }
 
   // Для длинных статей обрабатываем первую часть и делаем краткое резюме остальных
@@ -69,11 +70,23 @@ async function processLongContent(
   const remainingChunks = chunks.slice(1).join('\n\n[...продолжение статьи...]\n\n')
   
   // Обрабатываем первую часть
-  const firstPartResult = await callOpenRouterAPI(firstChunk, action, apiKey, promptConfig)
+  const firstPartResult = await callOpenRouterAPI(firstChunk, action, apiKey, promptConfig, sourceUrl)
   
   // Если есть остальные части, добавляем информацию о них
   if (chunks.length > 1) {
-    return `${firstPartResult}\n\n[Примечание: статья была сокращена для обработки. Показаны результаты анализа первой части статьи.]`
+      const note = `\n\n[Примечание: статья была сокращена для обработки. Показаны результаты анализа первой части статьи.]`
+      // Для telegram добавляем ссылку на источник в конце только если её еще нет
+      if (action === 'telegram' && sourceUrl) {
+        const hasSourceLink = firstPartResult.includes(sourceUrl) || 
+                             firstPartResult.toLowerCase().includes('источник:') ||
+                             firstPartResult.includes('📎 Источник') ||
+                             firstPartResult.includes('Источник:')
+        
+        if (!hasSourceLink) {
+          return `${firstPartResult}${note}\n\n📎 Источник: ${sourceUrl}`
+        }
+      }
+      return `${firstPartResult}${note}`
   }
   
   return firstPartResult
@@ -86,7 +99,8 @@ async function callOpenRouterAPI(
   content: string,
   action: ActionType,
   apiKey: string,
-  promptConfig: PromptConfig
+  promptConfig: PromptConfig,
+  sourceUrl?: string
 ): Promise<string> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
@@ -157,7 +171,7 @@ async function callOpenRouterAPI(
   }
 }
 
-function getPromptConfig(action: ActionType, content: string): PromptConfig {
+function getPromptConfig(action: ActionType, content: string, sourceUrl?: string): PromptConfig {
   const configs: Record<ActionType, PromptConfig> = {
     summary: {
       systemMessage: 'Ты опытный аналитик и журналист. Твоя задача - создать краткое, но информативное содержание статьи. Твой ответ должен быть структурированным, понятным и содержать только ключевые идеи статьи.',
@@ -173,7 +187,7 @@ function getPromptConfig(action: ActionType, content: string): PromptConfig {
     },
     telegram: {
       systemMessage: 'Ты копирайтер, специализирующийся на создании постов для Telegram. Твоя задача - создать привлекательный и информативный пост. Пост должен быть структурированным, использовать эмодзи для визуального оформления и иметь призыв к действию.',
-      userMessage: `Создай пост для Telegram канала на основе следующей статьи. Пост должен быть:\n- Привлекательным и цепляющим с самого начала\n- Содержать основные идеи статьи в сжатом виде\n- Использовать эмодзи для визуального оформления (но не переборщить)\n- Иметь призыв к действию в конце\n- Быть структурированным: заголовок (можно с эмодзи), основной текст, хэштеги в конце\n- Легко читаться и быть интересным\n\nОтвет должен быть на русском языке.\n\nСтатья:\n${content}`,
+      userMessage: `Создай пост для Telegram канала на основе следующей статьи. Пост должен быть:\n- Привлекательным и цепляющим с самого начала\n- Содержать основные идеи статьи в сжатом виде\n- Использовать эмодзи для визуального оформления (но не переборщить)\n- Иметь призыв к действию в конце\n- Быть структурированным: заголовок (можно с эмодзи), основной текст, хэштеги в конце\n- Легко читаться и быть интересным\n- В самом конце поста обязательно добавь ссылку на источник статьи в формате: "📎 Источник: [URL]" где [URL] - это просто URL без квадратных и круглых скобок, например: "📎 Источник: https://example.com/article"\n\nВАЖНО: Не используй Markdown формат для ссылки (не пиши [текст](url)). Просто напиши URL после "Источник:"\n\nОтвет должен быть на русском языке.\n\nСтатья:\n${content}${sourceUrl ? `\n\nИсточник статьи: ${sourceUrl}` : ''}`,
       temperature: 0.7,
       maxTokens: 3000,
     },
@@ -184,7 +198,7 @@ function getPromptConfig(action: ActionType, content: string): PromptConfig {
 
 export async function POST(request: NextRequest) {
   try {
-    const { content, action } = await request.json()
+    const { content, action, sourceUrl } = await request.json()
 
     // Валидация входных данных
     if (!content || typeof content !== 'string') {
@@ -218,17 +232,35 @@ export async function POST(request: NextRequest) {
     }
 
     // Получаем конфигурацию промпта для выбранного действия
-    const promptConfig = getPromptConfig(action as ActionType, content)
+    const promptConfig = getPromptConfig(action as ActionType, content, sourceUrl)
 
     // Обрабатываем контент (с поддержкой длинных статей)
     let result: string
     
     if (content.length > MAX_CONTENT_LENGTH) {
       // Для очень длинных статей используем специальную обработку
-      result = await processLongContent(content, action as ActionType, apiKey, promptConfig)
+      result = await processLongContent(content, action as ActionType, apiKey, promptConfig, sourceUrl)
     } else {
       // Для обычных статей обрабатываем напрямую
-      result = await callOpenRouterAPI(content, action as ActionType, apiKey, promptConfig)
+      result = await callOpenRouterAPI(content, action as ActionType, apiKey, promptConfig, sourceUrl)
+    }
+    
+    // Для telegram обрабатываем ссылку на источник
+    if (action === 'telegram' && sourceUrl) {
+      // Удаляем Markdown формат ссылки, если он есть (заменяем [url](url) на просто url)
+      result = result.replace(/\[(https?:\/\/[^\]]+)\]\(https?:\/\/[^\)]+\)/g, '$1')
+      // Также заменяем случаи, когда URL в квадратных скобках без круглых
+      result = result.replace(/\[(https?:\/\/[^\]]+)\]/g, '$1')
+      
+      // Проверяем наличие ссылки или фразы "Источник" в результате
+      const hasSourceLink = result.includes(sourceUrl) || 
+                           result.toLowerCase().includes('источник:') ||
+                           result.includes('📎 Источник') ||
+                           result.includes('Источник:')
+      
+      if (!hasSourceLink) {
+        result = `${result}\n\n📎 Источник: ${sourceUrl}`
+      }
     }
 
     if (!result || result.trim().length === 0) {
