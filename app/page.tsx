@@ -7,6 +7,7 @@ export default function Home() {
   const [result, setResult] = useState('')
   const [loading, setLoading] = useState(false)
   const [activeButton, setActiveButton] = useState<string | null>(null)
+  const [processingStage, setProcessingStage] = useState<'parsing' | 'ai' | null>(null)
 
   const handleParse = async () => {
     if (!url.trim()) {
@@ -49,6 +50,7 @@ export default function Home() {
     setLoading(true)
     setActiveButton('translate')
     setResult('')
+    setProcessingStage('parsing')
 
     try {
       // Сначала парсим статью
@@ -72,6 +74,9 @@ export default function Home() {
         throw new Error('Не удалось извлечь контент статьи')
       }
 
+      // Переключаемся на этап перевода
+      setProcessingStage('ai')
+
       // Отправляем контент на перевод
       const translateResponse = await fetch('/api/translate', {
         method: 'POST',
@@ -92,6 +97,7 @@ export default function Home() {
       setResult(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`)
     } finally {
       setLoading(false)
+      setProcessingStage(null)
     }
   }
 
@@ -104,6 +110,7 @@ export default function Home() {
     setLoading(true)
     setActiveButton(action)
     setResult('')
+    setProcessingStage('parsing')
 
     try {
       // Шаг 1: Парсим статью
@@ -126,6 +133,9 @@ export default function Home() {
       if (!parseData.content || parseData.content === 'Контент не найден') {
         throw new Error('Не удалось извлечь контент статьи. Проверьте URL и попробуйте снова.')
       }
+
+      // Переключаемся на этап AI обработки
+      setProcessingStage('ai')
 
       // Шаг 3: Отправляем контент в API для AI-обработки
       const aiResponse = await fetch('/api/ai-process', {
@@ -159,6 +169,7 @@ export default function Home() {
       console.error('Ошибка обработки:', error)
     } finally {
       setLoading(false)
+      setProcessingStage(null)
     }
   }
 
@@ -255,11 +266,79 @@ export default function Home() {
           </h2>
           <div className="min-h-[200px] p-4 bg-gray-50 rounded-md border border-gray-200">
             {loading ? (
-              <div className="flex items-center justify-center h-full">
+              <div className="flex flex-col items-center justify-center h-full space-y-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="text-gray-600 text-sm">
+                  {processingStage === 'parsing' 
+                    ? 'Парсинг статьи...' 
+                    : processingStage === 'ai'
+                    ? 'AI обработка...'
+                    : 'Обработка...'}
+                </p>
               </div>
             ) : result ? (
-              <pre className="text-gray-700 whitespace-pre-wrap text-sm overflow-auto max-h-[600px]">{result}</pre>
+              <div className="text-gray-700 text-sm overflow-auto max-h-[600px]">
+                {activeButton === 'thesis' ? (
+                  // Для тезисов сохраняем нумерацию и структуру
+                  <div className="whitespace-pre-wrap font-sans">
+                    {result.split('\n').map((line, index) => {
+                      // Проверяем, является ли строка нумерованным списком
+                      if (/^\d+[\.\)]\s/.test(line.trim())) {
+                        return (
+                          <div key={index} className="mb-2 pl-4">
+                            {line}
+                          </div>
+                        )
+                      }
+                      return (
+                        <div key={index} className="mb-1">
+                          {line}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : activeButton === 'telegram' ? (
+                  // Для поста Telegram сохраняем форматирование с эмодзи
+                  <div className="whitespace-pre-wrap font-sans leading-relaxed">
+                    {result.split('\n').map((line, index) => {
+                      // Определяем тип строки для форматирования
+                      const isHeader = line.trim().length > 0 && 
+                        (line.trim().startsWith('#') || 
+                         index === 0 || 
+                         /^[🔴🟠🟡🟢🔵🟣⚫⚪🟤].*/.test(line.trim()))
+                      const isHashtag = line.trim().startsWith('#')
+                      
+                      if (isHashtag) {
+                        return (
+                          <div key={index} className="mt-3 text-blue-600 font-medium">
+                            {line}
+                          </div>
+                        )
+                      } else if (isHeader) {
+                        return (
+                          <div key={index} className="mb-3 text-lg font-semibold">
+                            {line}
+                          </div>
+                        )
+                      }
+                      return (
+                        <div key={index} className="mb-2">
+                          {line}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  // Для остальных (summary, translate) - читабельные абзацы
+                  <div className="whitespace-pre-wrap font-sans leading-relaxed">
+                    {result.split('\n\n').map((paragraph, index) => (
+                      <p key={index} className="mb-4 last:mb-0">
+                        {paragraph}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
             ) : (
               <p className="text-gray-400 text-center">Результат появится здесь после обработки</p>
             )}
