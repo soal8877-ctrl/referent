@@ -9,66 +9,6 @@ export default function Home() {
   const [activeButton, setActiveButton] = useState<string | null>(null)
   const [processingStage, setProcessingStage] = useState<'parsing' | 'ai' | null>(null)
 
-  const handleTranslate = async () => {
-    if (!url.trim()) {
-      alert('Пожалуйста, введите URL статьи')
-      return
-    }
-
-    setLoading(true)
-    setActiveButton('translate')
-    setResult('')
-    setProcessingStage('parsing')
-
-    try {
-      // Сначала парсим статью
-      const parseResponse = await fetch('/api/parse', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
-      })
-
-      if (!parseResponse.ok) {
-        const error = await parseResponse.json()
-        throw new Error(error.error || 'Ошибка парсинга')
-      }
-
-      const parseData = await parseResponse.json()
-      
-      // Если нет контента, выводим ошибку
-      if (!parseData.content || parseData.content === 'Контент не найден') {
-        throw new Error('Не удалось извлечь контент статьи')
-      }
-
-      // Переключаемся на этап перевода
-      setProcessingStage('ai')
-
-      // Отправляем контент на перевод
-      const translateResponse = await fetch('/api/translate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content: parseData.content }),
-      })
-
-      if (!translateResponse.ok) {
-        const error = await translateResponse.json()
-        throw new Error(error.error || 'Ошибка перевода')
-      }
-
-      const translateData = await translateResponse.json()
-      setResult(translateData.translation || 'Перевод не получен')
-    } catch (error) {
-      setResult(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`)
-    } finally {
-      setLoading(false)
-      setProcessingStage(null)
-    }
-  }
-
   const handleSubmit = async (action: 'summary' | 'thesis' | 'telegram') => {
     if (!url.trim()) {
       alert('Пожалуйста, введите URL статьи')
@@ -165,19 +105,7 @@ export default function Home() {
 
         {/* Кнопки действий */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button
-              onClick={handleTranslate}
-              disabled={loading}
-              className={`px-6 py-3 rounded-md font-medium transition-all ${
-                activeButton === 'translate'
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-orange-500 text-white hover:bg-orange-600'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {loading && activeButton === 'translate' ? 'Перевод...' : 'Перевести'}
-            </button>
-
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => handleSubmit('summary')}
               disabled={loading}
