@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
+import { AlertCircle } from 'lucide-react'
 
 export default function Home() {
   const [url, setUrl] = useState('')
@@ -8,6 +10,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [activeButton, setActiveButton] = useState<string | null>(null)
   const [processingStage, setProcessingStage] = useState<'parsing' | 'ai' | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (action: 'summary' | 'thesis' | 'telegram') => {
     if (!url.trim()) {
@@ -18,6 +21,7 @@ export default function Home() {
     setLoading(true)
     setActiveButton(action)
     setResult('')
+    setError(null)
     setProcessingStage('parsing')
 
     try {
@@ -31,15 +35,17 @@ export default function Home() {
       })
 
       if (!parseResponse.ok) {
-        const error = await parseResponse.json()
-        throw new Error(error.error || 'Ошибка парсинга')
+        const errorData = await parseResponse.json()
+        // Используем дружественное сообщение из API или стандартное
+        const errorMessage = errorData.message || 'Не удалось загрузить статью по этой ссылке.'
+        throw { type: 'parse', message: errorMessage, code: errorData.error }
       }
 
       const parseData = await parseResponse.json()
       
       // Шаг 2: Валидация наличия контента после парсинга
       if (!parseData.content || parseData.content === 'Контент не найден') {
-        throw new Error('Не удалось извлечь контент статьи. Проверьте URL и попробуйте снова.')
+        throw { type: 'parse', message: 'Не удалось извлечь контент статьи. Проверьте URL и попробуйте снова.', code: 'NO_CONTENT' }
       }
 
       // Переключаемся на этап AI обработки
@@ -59,22 +65,36 @@ export default function Home() {
       })
 
       if (!aiResponse.ok) {
-        const error = await aiResponse.json()
-        throw new Error(error.error || 'Ошибка AI-обработки')
+        const errorData = await aiResponse.json()
+        // Используем дружественное сообщение из API
+        const errorMessage = errorData.message || 'Произошла ошибка при обработке статьи. Попробуйте позже.'
+        throw { type: 'ai', message: errorMessage, code: errorData.error }
       }
 
       const aiData = await aiResponse.json()
       
       // Шаг 4: Выводим результат AI-обработки в поле "Результат"
       if (!aiData.result) {
-        throw new Error('Результат AI-обработки не получен')
+        throw { type: 'ai', message: 'Результат обработки не получен. Попробуйте еще раз.', code: 'NO_RESULT' }
       }
 
       setResult(aiData.result)
+      setError(null)
     } catch (error) {
-      // Обработка ошибок с понятными сообщениями
-      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
-      setResult(`Ошибка: ${errorMessage}`)
+      // Обработка ошибок с дружественными сообщениями
+      if (error && typeof error === 'object' && 'message' in error) {
+        setError(error.message as string)
+      } else if (error instanceof Error) {
+        // Для сетевых ошибок показываем дружественное сообщение
+        if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
+          setError('Не удалось загрузить статью по этой ссылке.')
+        } else {
+          setError(error.message)
+        }
+      } else {
+        setError('Произошла неизвестная ошибка. Попробуйте позже.')
+      }
+      setResult('')
       console.error('Ошибка обработки:', error)
     } finally {
       setLoading(false)
@@ -171,6 +191,15 @@ export default function Home() {
               </p>
             </div>
           </div>
+        )}
+
+        {/* Блок ошибок */}
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Ошибка</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {/* Блок результата */}

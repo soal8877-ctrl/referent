@@ -13,15 +13,44 @@ export async function POST(request: NextRequest) {
     }
 
     // Получаем HTML страницы
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-    })
+    let response: Response
+    try {
+      response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+        signal: AbortSignal.timeout(30000), // Таймаут 30 секунд
+      })
+    } catch (error) {
+      // Обработка ошибок сети и таймаутов
+      if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('timeout'))) {
+        return NextResponse.json(
+          { error: 'TIMEOUT', message: 'Не удалось загрузить статью по этой ссылке.' },
+          { status: 408 }
+        )
+      }
+      return NextResponse.json(
+        { error: 'NETWORK_ERROR', message: 'Не удалось загрузить статью по этой ссылке.' },
+        { status: 500 }
+      )
+    }
 
     if (!response.ok) {
+      // Обработка различных HTTP ошибок
+      if (response.status === 404) {
+        return NextResponse.json(
+          { error: 'NOT_FOUND', message: 'Не удалось загрузить статью по этой ссылке.' },
+          { status: 404 }
+        )
+      }
+      if (response.status >= 500) {
+        return NextResponse.json(
+          { error: 'SERVER_ERROR', message: 'Не удалось загрузить статью по этой ссылке.' },
+          { status: response.status }
+        )
+      }
       return NextResponse.json(
-        { error: `Не удалось загрузить страницу: ${response.statusText}` },
+        { error: 'LOAD_ERROR', message: 'Не удалось загрузить статью по этой ссылке.' },
         { status: response.status }
       )
     }

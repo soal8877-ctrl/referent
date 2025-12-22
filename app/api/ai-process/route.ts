@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
 
     if (!result || result.trim().length === 0) {
       return NextResponse.json(
-        { error: 'Получен пустой ответ от AI. Попробуйте еще раз.' },
+        { error: 'EMPTY_RESULT', message: 'Результат обработки не получен. Попробуйте еще раз.' },
         { status: 500 }
       )
     }
@@ -276,25 +276,35 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Ошибка AI-обработки:', error)
     
-    // Более детальная обработка ошибок
-    let errorMessage = 'Неизвестная ошибка при AI-обработке'
+    // Более детальная обработка ошибок с дружественными сообщениями
+    let errorCode = 'AI_ERROR'
+    let errorMessage = 'Произошла ошибка при обработке статьи. Попробуйте позже.'
     
     if (error instanceof Error) {
-      errorMessage = error.message
-      
       // Специальная обработка для сетевых ошибок
       if (error.message.includes('fetch') || error.message.includes('network')) {
-        errorMessage = 'Ошибка сети. Проверьте подключение к интернету и попробуйте позже.'
+        errorCode = 'NETWORK_ERROR'
+        errorMessage = 'Ошибка подключения к сервису обработки. Проверьте подключение к интернету и попробуйте позже.'
       }
-      
       // Обработка ошибок таймаута
-      if (error.message.includes('время ожидания') || error.message.includes('timeout')) {
-        errorMessage = 'Превышено время ожидания ответа. Статья слишком длинная или сервер перегружен. Попробуйте позже.'
+      else if (error.message.includes('время ожидания') || error.message.includes('timeout') || error.message.includes('AbortError')) {
+        errorCode = 'TIMEOUT_ERROR'
+        errorMessage = 'Превышено время ожидания ответа. Статья слишком длинная или сервер перегружен. Попробуйте позже или сократите текст статьи.'
+      }
+      // Ошибки API ключа
+      else if (error.message.includes('API ключ') || error.message.includes('API key')) {
+        errorCode = 'API_KEY_ERROR'
+        errorMessage = 'Ошибка настройки API. Обратитесь к администратору.'
+      }
+      // Ошибки формата ответа
+      else if (error.message.includes('формат ответа') || error.message.includes('unexpected')) {
+        errorCode = 'FORMAT_ERROR'
+        errorMessage = 'Ошибка обработки ответа от сервиса. Попробуйте позже.'
       }
     }
     
     return NextResponse.json(
-      { error: errorMessage },
+      { error: errorCode, message: errorMessage },
       { status: 500 }
     )
   }
