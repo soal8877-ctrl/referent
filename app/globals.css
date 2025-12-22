@@ -19,3 +19,8 @@ body {
   background: #fff;
 }
 
+.dark body {
+  color: #e5e7eb;
+  background: #111827;
+}
+
