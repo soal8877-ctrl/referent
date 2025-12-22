@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Copy, X } from 'lucide-react'
 
 export default function Home() {
   const [url, setUrl] = useState('')
@@ -11,6 +11,8 @@ export default function Home() {
   const [activeButton, setActiveButton] = useState<string | null>(null)
   const [processingStage, setProcessingStage] = useState<'parsing' | 'ai' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const resultRef = useRef<HTMLDivElement>(null)
 
   const handleSubmit = async (action: 'summary' | 'thesis' | 'telegram') => {
     if (!url.trim()) {
@@ -80,6 +82,11 @@ export default function Home() {
 
       setResult(aiData.result)
       setError(null)
+      
+      // Автоматическая прокрутка к результатам после успешной генерации
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
     } catch (error) {
       // Обработка ошибок с дружественными сообщениями
       if (error && typeof error === 'object' && 'message' in error) {
@@ -102,6 +109,43 @@ export default function Home() {
     }
   }
 
+  const handleClear = () => {
+    setUrl('')
+    setResult('')
+    setError(null)
+    setLoading(false)
+    setActiveButton(null)
+    setProcessingStage(null)
+    setCopied(false)
+  }
+
+  const handleCopy = async () => {
+    if (!result) return
+    
+    try {
+      await navigator.clipboard.writeText(result)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Ошибка копирования:', err)
+      // Fallback для старых браузеров
+      const textArea = document.createElement('textarea')
+      textArea.value = result
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      textArea.select()
+      try {
+        document.execCommand('copy')
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      } catch (fallbackErr) {
+        console.error('Ошибка копирования (fallback):', fallbackErr)
+      }
+      document.body.removeChild(textArea)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -111,9 +155,20 @@ export default function Home() {
 
         {/* Поле ввода URL */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
-            URL англоязычной статьи
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label htmlFor="url" className="block text-sm font-medium text-gray-700">
+              URL англоязычной статьи
+            </label>
+            <button
+              onClick={handleClear}
+              disabled={loading}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Очистить все поля и результаты"
+            >
+              <X className="h-4 w-4" />
+              Очистить
+            </button>
+          </div>
           <input
             id="url"
             type="url"
@@ -203,10 +258,22 @@ export default function Home() {
         )}
 
         {/* Блок результата */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Результат
-          </h2>
+        <div ref={resultRef} className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Результат
+            </h2>
+            {result && !loading && (
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors"
+                title="Копировать результат"
+              >
+                <Copy className="h-4 w-4" />
+                {copied ? 'Скопировано!' : 'Копировать'}
+              </button>
+            )}
+          </div>
           <div className="min-h-[200px] p-4 bg-gray-50 rounded-md border border-gray-200">
             {loading ? (
               <p className="text-gray-400 text-center">Результат появится здесь после обработки</p>
