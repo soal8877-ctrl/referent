@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
-import { AlertCircle, Copy, X } from 'lucide-react'
+import { AlertCircle, Copy, X, History, Trash2 } from 'lucide-react'
 
 export default function Home() {
   const [url, setUrl] = useState('')
@@ -12,7 +12,60 @@ export default function Home() {
   const [processingStage, setProcessingStage] = useState<'parsing' | 'ai' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [urlHistory, setUrlHistory] = useState<string[]>([])
+  const [showHistory, setShowHistory] = useState(false)
   const resultRef = useRef<HTMLDivElement>(null)
+
+  // Загрузка истории из localStorage при монтировании
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('urlHistory')
+    if (savedHistory) {
+      try {
+        const parsed = JSON.parse(savedHistory)
+        setUrlHistory(Array.isArray(parsed) ? parsed : [])
+      } catch (e) {
+        console.error('Ошибка загрузки истории:', e)
+        setUrlHistory([])
+      }
+    }
+  }, [])
+
+  // Сохранение URL в историю
+  const saveToHistory = (urlToSave: string) => {
+    if (!urlToSave.trim()) return
+    
+    setUrlHistory((prev) => {
+      // Удаляем дубликаты и добавляем в начало
+      const filtered = prev.filter((item) => item !== urlToSave)
+      const newHistory = [urlToSave, ...filtered].slice(0, 10) // Максимум 10 элементов
+      
+      // Сохраняем в localStorage
+      localStorage.setItem('urlHistory', JSON.stringify(newHistory))
+      
+      return newHistory
+    })
+  }
+
+  // Удаление URL из истории
+  const removeFromHistory = (urlToRemove: string) => {
+    setUrlHistory((prev) => {
+      const newHistory = prev.filter((item) => item !== urlToRemove)
+      localStorage.setItem('urlHistory', JSON.stringify(newHistory))
+      return newHistory
+    })
+  }
+
+  // Очистка всей истории
+  const clearHistory = () => {
+    setUrlHistory([])
+    localStorage.removeItem('urlHistory')
+  }
+
+  // Выбор URL из истории
+  const selectFromHistory = (selectedUrl: string) => {
+    setUrl(selectedUrl)
+    setShowHistory(false)
+  }
 
   const handleSubmit = async (action: 'summary' | 'thesis' | 'telegram') => {
     if (!url.trim()) {
@@ -82,6 +135,9 @@ export default function Home() {
 
       setResult(aiData.result)
       setError(null)
+      
+      // Сохраняем URL в историю после успешной обработки
+      saveToHistory(url)
       
       // Автоматическая прокрутка к результатам после успешной генерации
       setTimeout(() => {
@@ -157,7 +213,7 @@ export default function Home() {
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2">
             <label htmlFor="url" className="block text-sm font-medium text-gray-700">
-              URL англоязычной статьи
+              Укажите ссылку на англоязычную статью:
             </label>
             <button
               onClick={handleClear}
@@ -169,17 +225,69 @@ export default function Home() {
               Очистить
             </button>
           </div>
+          
           <input
             id="url"
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Введите URL статьи, например: https://example.com/article"
-            className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm sm:text-base"
+            className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm sm:text-base mb-2"
           />
-          <p className="mt-2 text-xs text-gray-500">
-            Укажите ссылку на англоязычную статью
-          </p>
+          
+          {/* Кнопка истории */}
+          {urlHistory.length > 0 && (
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors w-full sm:w-auto"
+              title={showHistory ? "Скрыть историю URL" : "Показать историю URL"}
+            >
+              <History className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span>История последних ссылок: {urlHistory.length}</span>
+            </button>
+          )}
+          
+          {/* Панель истории */}
+          {showHistory && urlHistory.length > 0 && (
+            <div className="mt-3 p-3 bg-gray-50 rounded-md border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-semibold text-gray-700">История URL ({urlHistory.length})</h3>
+                <button
+                  onClick={clearHistory}
+                  className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                  title="Очистить всю историю"
+                >
+                  Очистить всё
+                </button>
+              </div>
+              <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                {urlHistory.map((historyUrl, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 hover:border-blue-300 transition-colors group"
+                  >
+                    <button
+                      onClick={() => selectFromHistory(historyUrl)}
+                      className="flex-1 text-left text-xs text-gray-700 hover:text-blue-600 break-all pr-2"
+                      title="Выбрать этот URL"
+                    >
+                      {historyUrl}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeFromHistory(historyUrl)
+                      }}
+                      className="flex-shrink-0 p-1 text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                      title="Удалить из истории"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Кнопки действий */}
@@ -261,7 +369,7 @@ export default function Home() {
         <div ref={resultRef} className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-3 sm:mb-4">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-              Результат
+              Результат:
             </h2>
             {result && !loading && (
               <button
