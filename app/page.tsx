@@ -180,16 +180,7 @@ export default function Home() {
           </h2>
           <div className="min-h-[200px] p-4 bg-gray-50 rounded-md border border-gray-200">
             {loading ? (
-              <div className="flex flex-col items-center justify-center h-full space-y-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p className="text-gray-600 text-sm">
-                  {processingStage === 'parsing' 
-                    ? 'Парсинг статьи...' 
-                    : processingStage === 'ai'
-                    ? 'AI обработка...'
-                    : 'Обработка...'}
-                </p>
-              </div>
+              <p className="text-gray-400 text-center">Результат появится здесь после обработки</p>
             ) : result ? (
               <div className="text-gray-700 text-sm overflow-auto max-h-[600px]">
                 {activeButton === 'thesis' ? (
