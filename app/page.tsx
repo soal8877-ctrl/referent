@@ -99,9 +99,12 @@ export default function Home() {
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://example.com/article"
+            placeholder="Введите URL статьи, например: https://example.com/article"
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
           />
+          <p className="mt-2 text-xs text-gray-500">
+            Укажите ссылку на англоязычную статью
+          </p>
         </div>
 
         {/* Кнопки действий */}
@@ -110,6 +113,7 @@ export default function Home() {
             <button
               onClick={() => handleSubmit('summary')}
               disabled={loading}
+              title="Получить краткое содержание статьи на русском языке"
               className={`px-6 py-3 rounded-md font-medium transition-all ${
                 activeButton === 'summary'
                   ? 'bg-blue-600 text-white'
@@ -122,6 +126,7 @@ export default function Home() {
             <button
               onClick={() => handleSubmit('thesis')}
               disabled={loading}
+              title="Выделить основные тезисы статьи в виде пронумерованного списка"
               className={`px-6 py-3 rounded-md font-medium transition-all ${
                 activeButton === 'thesis'
                   ? 'bg-green-600 text-white'
@@ -134,6 +139,7 @@ export default function Home() {
             <button
               onClick={() => handleSubmit('telegram')}
               disabled={loading}
+              title="Создать готовый пост для Telegram канала с эмодзи и хэштегами"
               className={`px-6 py-3 rounded-md font-medium transition-all ${
                 activeButton === 'telegram'
                   ? 'bg-purple-600 text-white'
@@ -144,6 +150,28 @@ export default function Home() {
             </button>
           </div>
         </div>
+
+        {/* Блок статуса процесса */}
+        {loading && processingStage && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              <p className="text-sm text-blue-800">
+                {processingStage === 'parsing' 
+                  ? 'Загружаю статью...' 
+                  : processingStage === 'ai'
+                  ? activeButton === 'summary'
+                    ? 'Создаю краткое содержание...'
+                    : activeButton === 'thesis'
+                    ? 'Выделяю тезисы...'
+                    : activeButton === 'telegram'
+                    ? 'Создаю пост для Telegram...'
+                    : 'Обрабатываю...'
+                  : 'Обработка...'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Блок результата */}
         <div className="bg-white rounded-lg shadow-md p-6">
