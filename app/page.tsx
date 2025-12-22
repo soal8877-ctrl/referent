@@ -147,22 +147,22 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-8 px-4">
+    <main className="min-h-screen bg-gray-50 py-4 sm:py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 md:mb-8 text-center px-2">
           Перевод и анализ статей с ИИ-обработкой
         </h1>
 
         {/* Поле ввода URL */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex items-center justify-between mb-2">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2">
             <label htmlFor="url" className="block text-sm font-medium text-gray-700">
               URL англоязычной статьи
             </label>
             <button
               onClick={handleClear}
               disabled={loading}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
               title="Очистить все поля и результаты"
             >
               <X className="h-4 w-4" />
@@ -175,7 +175,7 @@ export default function Home() {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Введите URL статьи, например: https://example.com/article"
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+            className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm sm:text-base"
           />
           <p className="mt-2 text-xs text-gray-500">
             Укажите ссылку на англоязычную статью
@@ -183,13 +183,13 @@ export default function Home() {
         </div>
 
         {/* Кнопки действий */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
             <button
               onClick={() => handleSubmit('summary')}
               disabled={loading}
               title="Получить краткое содержание статьи на русском языке"
-              className={`px-6 py-3 rounded-md font-medium transition-all ${
+              className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-md font-medium transition-all text-sm sm:text-base ${
                 activeButton === 'summary'
                   ? 'bg-blue-600 text-white'
                   : 'bg-blue-500 text-white hover:bg-blue-600'
@@ -202,7 +202,7 @@ export default function Home() {
               onClick={() => handleSubmit('thesis')}
               disabled={loading}
               title="Выделить основные тезисы статьи в виде пронумерованного списка"
-              className={`px-6 py-3 rounded-md font-medium transition-all ${
+              className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-md font-medium transition-all text-sm sm:text-base ${
                 activeButton === 'thesis'
                   ? 'bg-green-600 text-white'
                   : 'bg-green-500 text-white hover:bg-green-600'
@@ -215,7 +215,7 @@ export default function Home() {
               onClick={() => handleSubmit('telegram')}
               disabled={loading}
               title="Создать готовый пост для Telegram канала с эмодзи и хэштегами"
-              className={`px-6 py-3 rounded-md font-medium transition-all ${
+              className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-md font-medium transition-all text-sm sm:text-base ${
                 activeButton === 'telegram'
                   ? 'bg-purple-600 text-white'
                   : 'bg-purple-500 text-white hover:bg-purple-600'
@@ -228,10 +228,10 @@ export default function Home() {
 
         {/* Блок статуса процесса */}
         {loading && processingStage && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-              <p className="text-sm text-blue-800">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-blue-600 flex-shrink-0"></div>
+              <p className="text-xs sm:text-sm text-blue-800 break-words">
                 {processingStage === 'parsing' 
                   ? 'Загружаю статью...' 
                   : processingStage === 'ai'
@@ -250,49 +250,49 @@ export default function Home() {
 
         {/* Блок ошибок */}
         {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
+          <Alert variant="destructive" className="mb-4 sm:mb-6">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
             <AlertTitle>Ошибка</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="break-words">{error}</AlertDescription>
           </Alert>
         )}
 
         {/* Блок результата */}
-        <div ref={resultRef} className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">
+        <div ref={resultRef} className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-3 sm:mb-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
               Результат
             </h2>
             {result && !loading && (
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors w-full sm:w-auto"
                 title="Копировать результат"
               >
-                <Copy className="h-4 w-4" />
+                <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 {copied ? 'Скопировано!' : 'Копировать'}
               </button>
             )}
           </div>
-          <div className="min-h-[200px] p-4 bg-gray-50 rounded-md border border-gray-200">
+          <div className="min-h-[200px] p-3 sm:p-4 bg-gray-50 rounded-md border border-gray-200">
             {loading ? (
               <p className="text-gray-400 text-center">Результат появится здесь после обработки</p>
             ) : result ? (
-              <div className="text-gray-700 text-sm overflow-auto max-h-[600px]">
+              <div className="text-gray-700 text-xs sm:text-sm overflow-auto max-h-[400px] sm:max-h-[600px] break-words">
                 {activeButton === 'thesis' ? (
                   // Для тезисов сохраняем нумерацию и структуру
-                  <div className="whitespace-pre-wrap font-sans">
+                  <div className="whitespace-pre-wrap font-sans break-words">
                     {result.split('\n').map((line, index) => {
                       // Проверяем, является ли строка нумерованным списком
                       if (/^\d+[\.\)]\s/.test(line.trim())) {
                         return (
-                          <div key={index} className="mb-2 pl-4">
+                          <div key={index} className="mb-2 pl-2 sm:pl-4 break-words">
                             {line}
                           </div>
                         )
                       }
                       return (
-                        <div key={index} className="mb-1">
+                        <div key={index} className="mb-1 break-words">
                           {line}
                         </div>
                       )
@@ -300,7 +300,7 @@ export default function Home() {
                   </div>
                 ) : activeButton === 'telegram' ? (
                   // Для поста Telegram сохраняем форматирование с эмодзи
-                  <div className="whitespace-pre-wrap font-sans leading-relaxed">
+                  <div className="whitespace-pre-wrap font-sans leading-relaxed break-words">
                     {result.split('\n').map((line, index) => {
                       // Определяем тип строки для форматирования
                       const isHeader = line.trim().length > 0 && 
@@ -311,19 +311,19 @@ export default function Home() {
                       
                       if (isHashtag) {
                         return (
-                          <div key={index} className="mt-3 text-blue-600 font-medium">
+                          <div key={index} className="mt-3 text-blue-600 font-medium break-words">
                             {line}
                           </div>
                         )
                       } else if (isHeader) {
                         return (
-                          <div key={index} className="mb-3 text-lg font-semibold">
+                          <div key={index} className="mb-3 text-base sm:text-lg font-semibold break-words">
                             {line}
                           </div>
                         )
                       }
                       return (
-                        <div key={index} className="mb-2">
+                        <div key={index} className="mb-2 break-words">
                           {line}
                         </div>
                       )
@@ -331,9 +331,9 @@ export default function Home() {
                   </div>
                 ) : (
                   // Для остальных (summary, translate) - читабельные абзацы
-                  <div className="whitespace-pre-wrap font-sans leading-relaxed">
+                  <div className="whitespace-pre-wrap font-sans leading-relaxed break-words">
                     {result.split('\n\n').map((paragraph, index) => (
-                      <p key={index} className="mb-4 last:mb-0">
+                      <p key={index} className="mb-3 sm:mb-4 last:mb-0 break-words">
                         {paragraph}
                       </p>
                     ))}
