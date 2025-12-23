@@ -7,9 +7,11 @@ import { AlertCircle, Copy, X, History, Trash2, Sun, Moon } from 'lucide-react'
 export default function Home() {
   const [url, setUrl] = useState('')
   const [result, setResult] = useState('')
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [imagePrompt, setImagePrompt] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [activeButton, setActiveButton] = useState<string | null>(null)
-  const [processingStage, setProcessingStage] = useState<'parsing' | 'ai' | null>(null)
+  const [processingStage, setProcessingStage] = useState<'parsing' | 'ai' | 'illustration' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [urlHistory, setUrlHistory] = useState<string[]>([])
@@ -101,7 +103,7 @@ export default function Home() {
     setShowHistory(false)
   }
 
-  const handleSubmit = async (action: 'summary' | 'thesis' | 'telegram') => {
+  const handleSubmit = async (action: 'summary' | 'thesis' | 'telegram' | 'illustration') => {
     if (!url.trim()) {
       alert('Пожалуйста, введите URL статьи')
       return
@@ -110,6 +112,8 @@ export default function Home() {
     setLoading(true)
     setActiveButton(action)
     setResult('')
+    setImageUrl(null)
+    setImagePrompt(null)
     setError(null)
     setProcessingStage('parsing')
 
@@ -137,7 +141,50 @@ export default function Home() {
         throw { type: 'parse', message: 'Не удалось извлечь контент статьи. Проверьте URL и попробуйте снова.', code: 'NO_CONTENT' }
       }
 
-      // Переключаемся на этап AI обработки
+      // Обработка иллюстрации отличается от других действий
+      if (action === 'illustration') {
+        setProcessingStage('illustration')
+        
+        // Отправляем запрос на генерацию иллюстрации
+        const illustrationResponse = await fetch('/api/illustration', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            content: parseData.content,
+          }),
+        })
+
+        if (!illustrationResponse.ok) {
+          const errorData = await illustrationResponse.json()
+          const errorMessage = errorData.message || 'Произошла ошибка при генерации иллюстрации. Попробуйте позже.'
+          throw { type: 'illustration', message: errorMessage, code: errorData.error }
+        }
+
+        const illustrationData = await illustrationResponse.json()
+        
+        if (!illustrationData.image) {
+          throw { type: 'illustration', message: 'Изображение не получено. Попробуйте еще раз.', code: 'NO_IMAGE' }
+        }
+
+        setImageUrl(illustrationData.image)
+        setImagePrompt(illustrationData.prompt || null)
+        setResult('')
+        setError(null)
+        
+        // Сохраняем URL в историю после успешной обработки
+        saveToHistory(url)
+        
+        // Автоматическая прокрутка к результатам после успешной генерации
+        setTimeout(() => {
+          resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 100)
+        
+        return
+      }
+
+      // Переключаемся на этап AI обработки для текстовых действий
       setProcessingStage('ai')
 
       // Шаг 3: Отправляем контент в API для AI-обработки
@@ -192,6 +239,8 @@ export default function Home() {
         setError('Произошла неизвестная ошибка. Попробуйте позже.')
       }
       setResult('')
+      setImageUrl(null)
+      setImagePrompt(null)
       console.error('Ошибка обработки:', error)
     } finally {
       setLoading(false)
@@ -202,6 +251,8 @@ export default function Home() {
   const handleClear = () => {
     setUrl('')
     setResult('')
+    setImageUrl(null)
+    setImagePrompt(null)
     setError(null)
     setLoading(false)
     setActiveButton(null)
@@ -340,7 +391,7 @@ export default function Home() {
 
         {/* Кнопки действий */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <button
               onClick={() => handleSubmit('summary')}
               disabled={loading}
@@ -379,6 +430,19 @@ export default function Home() {
             >
               {loading && activeButton === 'telegram' ? 'Обработка...' : 'Пост для Telegram'}
             </button>
+
+            <button
+              onClick={() => handleSubmit('illustration')}
+              disabled={loading}
+              title="Сгенерировать иллюстрацию к статье с помощью AI"
+              className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-md font-medium transition-all text-sm sm:text-base ${
+                activeButton === 'illustration'
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-orange-500 text-white hover:bg-orange-600'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {loading && activeButton === 'illustration' ? 'Генерация...' : 'Иллюстрация'}
+            </button>
           </div>
         </div>
 
@@ -390,6 +454,10 @@ export default function Home() {
               <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 break-words">
                 {processingStage === 'parsing' 
                   ? 'Загружаю статью...' 
+                  : processingStage === 'illustration'
+                  ? activeButton === 'illustration'
+                    ? 'Генерирую иллюстрацию...'
+                    : 'Генерация...'
                   : processingStage === 'ai'
                   ? activeButton === 'summary'
                     ? 'Создаю краткое содержание...'
@@ -433,6 +501,23 @@ export default function Home() {
           <div className="min-h-[200px] p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
             {loading ? (
               <p className="text-gray-400 dark:text-gray-500 text-center">Результат появится здесь после обработки</p>
+            ) : imageUrl ? (
+              // Отображение изображения
+              <div className="space-y-4">
+                <div className="flex justify-center">
+                  <img 
+                    src={imageUrl} 
+                    alt="Сгенерированная иллюстрация" 
+                    className="max-w-full h-auto rounded-lg shadow-lg"
+                  />
+                </div>
+                {imagePrompt && (
+                  <div className="mt-4 p-3 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-600">
+                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Промпт для генерации:</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 italic">{imagePrompt}</p>
+                  </div>
+                )}
+              </div>
             ) : result ? (
               <div className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm overflow-auto max-h-[400px] sm:max-h-[600px] break-words">
                 {activeButton === 'thesis' ? (
