@@ -197,6 +197,16 @@ function getPromptConfig(action: ActionType, content: string, sourceUrl?: string
 }
 
 export async function POST(request: NextRequest) {
+  // Блокировка отправки запроса
+  return NextResponse.json(
+    { 
+      error: 'AI-обработка статей временно отключена',
+      message: 'AI-обработка статей временно отключена'
+    },
+    { status: 503 }
+  )
+  
+  /* Закомментировано для блокировки запросов
   try {
     const { content, action, sourceUrl } = await request.json()
 
@@ -308,5 +318,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+  */
 }
 

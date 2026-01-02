@@ -153,6 +153,16 @@ async function generateImage(prompt: string, hfApiKey: string): Promise<string> 
 }
 
 export async function POST(request: NextRequest) {
+  // Блокировка отправки запроса
+  return NextResponse.json(
+    { 
+      error: 'Генерация иллюстраций временно отключена',
+      message: 'Генерация иллюстраций временно отключена'
+    },
+    { status: 503 }
+  )
+  
+  /* Закомментировано для блокировки запросов
   try {
     const { content } = await request.json()
 
@@ -230,5 +240,6 @@ export async function POST(request: NextRequest) {
       { status: statusCode }
     )
   }
+  */
 }
 
