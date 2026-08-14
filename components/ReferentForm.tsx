@@ -25,34 +25,6 @@ function isHttpUrl(value: string): boolean {
   }
 }
 
-function demoResult(action: Action, url: string): string {
-  const host = new URL(url).hostname;
-
-  if (action === "summary") {
-    return `Статья с ${host} разбирает одну тему и приводит аргументы автора.\n\nAI ещё не подключён — это демо ответа для проверки интерфейса.`;
-  }
-
-  if (action === "theses") {
-    return [
-      "1. Основная мысль статьи.",
-      "2. Ключевые факты и примеры.",
-      "3. Вывод автора.",
-      "",
-      "AI ещё не подключён — это демо ответа для проверки интерфейса.",
-    ].join("\n");
-  }
-
-  return [
-    `Коротко о статье (${host})`,
-    "",
-    "Главная идея в одном абзаце. Дальше — 2–3 тезиса и ссылка.",
-    "",
-    url,
-    "",
-    "AI ещё не подключён — это демо ответа для проверки интерфейса.",
-  ].join("\n");
-}
-
 export function ReferentForm() {
   const [url, setUrl] = useState("");
   const [activeAction, setActiveAction] = useState<Action | null>(null);
@@ -78,9 +50,30 @@ export function ReferentForm() {
     setLoading(true);
     setResult("");
 
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    setResult(demoResult(action, trimmed));
-    setLoading(false);
+    try {
+      const response = await fetch("/api/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      });
+
+      const data: unknown = await response.json();
+
+      if (!response.ok) {
+        const message =
+          typeof data === "object" && data && "error" in data && typeof data.error === "string"
+            ? data.error
+            : "Не удалось разобрать статью.";
+        setError(message);
+        return;
+      }
+
+      setResult(JSON.stringify(data, null, 2));
+    } catch {
+      setError("Не удалось связаться с сервером парсинга.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -146,9 +139,9 @@ export function ReferentForm() {
         </div>
 
         {loading ? (
-          <p className="text-zinc-300">Генерация ответа…</p>
+          <p className="text-zinc-300">Парсинг статьи…</p>
         ) : result ? (
-          <pre className="whitespace-pre-wrap font-sans text-base leading-7 text-zinc-100">
+          <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-sm leading-6 text-zinc-100">
             {result}
           </pre>
         ) : (
