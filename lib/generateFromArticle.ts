@@ -27,7 +27,7 @@ export async function generateFromArticle(
     source.length > limit ? `${source.slice(0, limit)}\n\n[Текст обрезан]` : source;
 
   const generated = await completeChat(buildGenerateMessages(action, truncated, url), {
-    maxTokens: action === "telegram" ? 500 : 4096,
+    maxTokens: action === "telegram" ? 500 : 1200,
   });
   const text = action === "telegram" ? finalizeTelegramPost(generated, url) : generated;
 
