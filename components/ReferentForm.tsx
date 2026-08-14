@@ -2,9 +2,9 @@
 
 import { FormEvent, useState } from "react";
 
-type Action = "summary" | "theses" | "telegram" | "translate";
+type Action = "summary" | "theses" | "telegram";
 
-const ACTIONS: { id: Exclude<Action, "translate">; label: string }[] = [
+const ACTIONS: { id: Action; label: string }[] = [
   { id: "summary", label: "О чем статья?" },
   { id: "theses", label: "Тезисы" },
   { id: "telegram", label: "Пост для Telegram" },
@@ -14,14 +14,12 @@ const ACTION_TITLES: Record<Action, string> = {
   summary: "О чем статья",
   theses: "Тезисы",
   telegram: "Пост для Telegram",
-  translate: "Перевод",
 };
 
 const LOADING_STATUSES: Record<Action, string> = {
   summary: "Краткое содержание…",
   theses: "Сбор тезисов…",
   telegram: "Черновик поста…",
-  translate: "Перевод статьи…",
 };
 
 function isHttpUrl(value: string): boolean {
@@ -39,15 +37,8 @@ function errorMessage(data: unknown, fallback: string): string {
     : fallback;
 }
 
-function resultFrom(action: Action, data: unknown): string {
+function resultFrom(data: unknown): string {
   if (typeof data !== "object" || !data) return "";
-
-  if (action === "translate") {
-    return "translation" in data && typeof data.translation === "string"
-      ? data.translation.trim()
-      : "";
-  }
-
   return "text" in data && typeof data.text === "string" ? data.text.trim() : "";
 }
 
@@ -76,34 +67,24 @@ export function ReferentForm() {
     setLoading(true);
     setResult("");
 
-    const endpoint = action === "translate" ? "/api/translate" : "/api/generate";
-    const fallback =
-      action === "translate" ? "Не удалось перевести статью." : "Не удалось обработать статью.";
-
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          action === "translate" ? { url: trimmed } : { url: trimmed, action },
-        ),
+        body: JSON.stringify({ url: trimmed, action }),
       });
 
       const data: unknown = await response.json();
 
       if (!response.ok) {
-        setError(errorMessage(data, fallback));
+        setError(errorMessage(data, "Не удалось обработать статью."));
         return;
       }
 
-      const text = resultFrom(action, data);
+      const text = resultFrom(data);
       setResult(text || "Модель не вернула ответ.");
     } catch {
-      setError(
-        action === "translate"
-          ? "Не удалось связаться с сервером перевода."
-          : "Не удалось связаться с сервером генерации.",
-      );
+      setError("Не удалось связаться с сервером генерации.");
     } finally {
       setLoading(false);
     }
@@ -111,7 +92,6 @@ export function ReferentForm() {
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void runAction("translate");
   }
 
   return (
@@ -159,18 +139,6 @@ export function ReferentForm() {
             );
           })}
         </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className={`rounded-xl border px-4 py-3 text-sm font-medium transition disabled:cursor-wait disabled:opacity-60 ${
-            activeAction === "translate" && !loading
-              ? "border-amber-400 bg-amber-400 text-zinc-950"
-              : "border-zinc-700 bg-zinc-900 text-zinc-100 hover:border-amber-400/70 hover:bg-zinc-800"
-          }`}
-        >
-          Перевести
-        </button>
       </form>
 
       <div className="min-h-56 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5">
