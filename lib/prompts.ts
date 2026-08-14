@@ -39,7 +39,7 @@ export function buildGenerateMessages(
 ): { role: "system" | "user"; content: string }[] {
   const userContent =
     action === "telegram"
-      ? `Сделай короткий пост по статье. Формат:\n1) заголовок с одним эмодзи\n2) два коротких абзаца на русском, ещё 2 эмодзи в тексте\n3) последняя строка — эта ссылка: ${url}\n\n500–800 знаков. Начинай сразу с заголовка.\n\n${source}`
+      ? `Сделай короткий пост по статье. Формат:\n1) заголовок с одним эмодзи\n2) два коротких абзаца на русском, ещё 2 эмодзи в тексте\n3) последняя строка: Ссылка на источник: ${url}\n\n500–800 знаков. Начинай сразу с заголовка.\n\n${source}`
       : source;
 
   return [
@@ -49,8 +49,18 @@ export function buildGenerateMessages(
 }
 
 export function ensureSourceUrl(text: string, url: string): string {
-  const trimmed = text.trim();
-  return trimmed.includes(url) ? trimmed : `${trimmed}\n\n${url}`;
+  const label = `Ссылка на источник: ${url}`;
+  const body = text
+    .replace(new RegExp(`Ссылка на источник:\\s*${escapeRegExp(url)}`, "gi"), "")
+    .replace(new RegExp(escapeRegExp(url), "gi"), "")
+    .replace(/Ссылка на источник:\s*/gi, "")
+    .trim();
+
+  return body ? `${body}\n\n${label}` : label;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function latinShare(text: string): number {
