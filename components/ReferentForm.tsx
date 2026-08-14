@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 
 type Action = "summary" | "theses" | "telegram" | "translate";
 
-const ACTIONS: { id: Action; label: string }[] = [
+const ACTIONS: { id: Exclude<Action, "translate">; label: string }[] = [
   { id: "summary", label: "О чем статья?" },
   { id: "theses", label: "Тезисы" },
   { id: "telegram", label: "Пост для Telegram" },
@@ -32,9 +32,16 @@ function errorMessage(data: unknown, fallback: string): string {
     : fallback;
 }
 
-function translationFrom(data: unknown): string {
-  if (typeof data !== "object" || !data || !("translation" in data)) return "";
-  return typeof data.translation === "string" ? data.translation.trim() : "";
+function resultFrom(action: Action, data: unknown): string {
+  if (typeof data !== "object" || !data) return "";
+
+  if (action === "translate") {
+    return "translation" in data && typeof data.translation === "string"
+      ? data.translation.trim()
+      : "";
+  }
+
+  return "text" in data && typeof data.text === "string" ? data.text.trim() : "";
 }
 
 export function ReferentForm() {
@@ -62,15 +69,17 @@ export function ReferentForm() {
     setLoading(true);
     setResult("");
 
-    const endpoint = action === "translate" ? "/api/translate" : "/api/parse";
+    const endpoint = action === "translate" ? "/api/translate" : "/api/generate";
     const fallback =
-      action === "translate" ? "Не удалось перевести статью." : "Не удалось разобрать статью.";
+      action === "translate" ? "Не удалось перевести статью." : "Не удалось обработать статью.";
 
     try {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: trimmed }),
+        body: JSON.stringify(
+          action === "translate" ? { url: trimmed } : { url: trimmed, action },
+        ),
       });
 
       const data: unknown = await response.json();
@@ -80,18 +89,13 @@ export function ReferentForm() {
         return;
       }
 
-      if (action === "translate") {
-        const text = translationFrom(data);
-        setResult(text || "Модель не вернула перевод.");
-        return;
-      }
-
-      setResult(JSON.stringify(data, null, 2));
+      const text = resultFrom(action, data);
+      setResult(text || "Модель не вернула ответ.");
     } catch {
       setError(
         action === "translate"
           ? "Не удалось связаться с сервером перевода."
-          : "Не удалось связаться с сервером парсинга.",
+          : "Не удалось связаться с сервером генерации.",
       );
     } finally {
       setLoading(false);
@@ -102,11 +106,6 @@ export function ReferentForm() {
     event.preventDefault();
     void runAction("translate");
   }
-
-  const resultClassName =
-    activeAction === "translate"
-      ? "overflow-x-auto whitespace-pre-wrap font-sans text-base leading-7 text-zinc-100"
-      : "overflow-x-auto whitespace-pre-wrap font-mono text-sm leading-6 text-zinc-100";
 
   return (
     <section className="flex flex-col gap-6">
@@ -179,10 +178,12 @@ export function ReferentForm() {
 
         {loading ? (
           <p className="text-zinc-300">
-            {activeAction === "translate" ? "Перевод статьи…" : "Парсинг статьи…"}
+            {activeAction === "translate" ? "Перевод статьи…" : "Генерация ответа…"}
           </p>
         ) : result ? (
-          <pre className={resultClassName}>{result}</pre>
+          <pre className="overflow-x-auto whitespace-pre-wrap font-sans text-base leading-7 text-zinc-100">
+            {result}
+          </pre>
         ) : (
           <p className="text-zinc-500">
             Вставьте ссылку и нажмите одну из кнопок — ответ появится здесь.

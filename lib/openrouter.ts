@@ -56,7 +56,7 @@ export async function completeChat(messages: ChatMessage[]): Promise<string> {
 
   const content = data.choices?.[0]?.message?.content?.trim();
   if (!content || content.length < 40) {
-    throw new Error("Модель не вернула перевод.");
+    throw new Error("Модель не вернула ответ.");
   }
 
   return content;
