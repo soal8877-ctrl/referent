@@ -1,4 +1,14 @@
-const OPENROUTER_URL = `${process.env.OPENAI_BASE_URL ?? "https://openrouter.ai/api/v1"}/chat/completions`;
+function envValue(name: string): string {
+  return (process.env[name] ?? "").trim().replace(/^["']|["']$/g, "");
+}
+
+function openRouterCompletionsUrl(): string {
+  const base = (envValue("OPENAI_BASE_URL") || "https://openrouter.ai/api/v1").replace(
+    /\/+$/,
+    "",
+  );
+  return `${base}/chat/completions`;
+}
 
 const FREE_MODEL = "nvidia/nemotron-3-nano-30b-a3b:free";
 const FREE_FALLBACKS = ["openai/gpt-oss-20b:free", "google/gemma-4-26b-a4b-it:free"];
@@ -14,13 +24,13 @@ type OpenRouterResponse = {
 };
 
 export async function completeChat(messages: ChatMessage[]): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = envValue("OPENROUTER_API_KEY");
 
   if (!apiKey) {
     throw new Error("Не задан OPENROUTER_API_KEY.");
   }
 
-  const response = await fetch(OPENROUTER_URL, {
+  const response = await fetch(openRouterCompletionsUrl(), {
     method: "POST",
     signal: AbortSignal.timeout(90_000),
     headers: {
