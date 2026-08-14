@@ -4,7 +4,7 @@ const GENERATE_ACTIONS: GenerateAction[] = ["summary", "theses", "telegram"];
 
 const SYSTEM_PROMPTS: Record<GenerateAction, string> = {
   summary:
-    "Ты референт. По статье кратко ответь на русском, о чём она. 1–2 абзаца связного текста, без списков, заголовков и предисловий. Только содержание.",
+    "Ты референт. Напиши краткое содержание статьи на русском языке.\n\nПравила:\n- ровно 1 или 2 абзаца связного текста;\n- без списков, заголовков, нумерации и буллетов;\n- без воды и вступлений вроде «статья рассказывает» или «автор пишет»;\n- передай тему, главную мысль и вывод;\n- не добавляй ничего от себя — только пересказ.",
   theses:
     "Ты референт. Выпиши на русском 5–8 тезисов статьи нумерованным списком. Один пункт — одна мысль. Не копируй абзацы, сжимай факты и выводы. Без вступления и заключения.",
   telegram:
@@ -13,6 +13,23 @@ const SYSTEM_PROMPTS: Record<GenerateAction, string> = {
 
 export function isGenerateAction(value: unknown): value is GenerateAction {
   return typeof value === "string" && GENERATE_ACTIONS.includes(value as GenerateAction);
+}
+
+export function buildArticleSource(
+  title: string | null,
+  content: string | null,
+): string {
+  const parts: string[] = [];
+
+  if (title?.trim()) {
+    parts.push(`Заголовок: ${title.trim()}`);
+  }
+
+  if (content?.trim()) {
+    parts.push(`Текст статьи:\n${content.trim()}`);
+  }
+
+  return parts.join("\n\n");
 }
 
 export function buildGenerateMessages(
