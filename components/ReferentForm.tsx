@@ -17,6 +17,13 @@ const ACTION_TITLES: Record<Action, string> = {
   translate: "Перевод",
 };
 
+const LOADING_STATUSES: Record<Action, string> = {
+  summary: "Краткое содержание…",
+  theses: "Сбор тезисов…",
+  telegram: "Черновик поста…",
+  translate: "Перевод статьи…",
+};
+
 function isHttpUrl(value: string): boolean {
   try {
     const url = new URL(value);
@@ -178,7 +185,7 @@ export function ReferentForm() {
 
         {loading ? (
           <p className="text-zinc-300">
-            {activeAction === "translate" ? "Перевод статьи…" : "Генерация ответа…"}
+            {activeAction ? LOADING_STATUSES[activeAction] : "Генерация ответа…"}
           </p>
         ) : result ? (
           <pre className="overflow-x-auto whitespace-pre-wrap font-sans text-base leading-7 text-zinc-100">
