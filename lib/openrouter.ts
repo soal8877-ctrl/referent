@@ -10,8 +10,8 @@ function openRouterCompletionsUrl(): string {
   return `${base}/chat/completions`;
 }
 
-const FREE_MODEL = "nvidia/nemotron-3-nano-30b-a3b:free";
-const FREE_FALLBACKS = ["openai/gpt-oss-20b:free", "google/gemma-4-26b-a4b-it:free"];
+const FREE_MODEL = "google/gemma-4-26b-a4b-it:free";
+const FREE_FALLBACKS = ["google/gemma-4-31b-it:free", "openai/gpt-oss-20b:free"];
 
 type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -20,10 +20,13 @@ type ChatMessage = {
 
 type OpenRouterResponse = {
   error?: { message?: string };
-  choices?: { message?: { content?: string } }[];
+  choices?: { message?: { content?: string; reasoning?: string } }[];
 };
 
-export async function completeChat(messages: ChatMessage[]): Promise<string> {
+export async function completeChat(
+  messages: ChatMessage[],
+  options?: { maxTokens?: number },
+): Promise<string> {
   const apiKey = envValue("OPENROUTER_API_KEY");
 
   if (!apiKey) {
@@ -43,8 +46,9 @@ export async function completeChat(messages: ChatMessage[]): Promise<string> {
       model: FREE_MODEL,
       models: FREE_FALLBACKS,
       messages,
-      temperature: 0.2,
-      max_tokens: 4096,
+      temperature: 0.3,
+      max_tokens: options?.maxTokens ?? 4096,
+      reasoning: { exclude: true },
     }),
   });
 

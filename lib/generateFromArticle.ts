@@ -1,8 +1,9 @@
 import { ArticleFetchError, fetchArticle } from "@/lib/fetchArticle";
 import { completeChat } from "@/lib/openrouter";
-import { buildArticleSource, buildGenerateMessages, type GenerateAction } from "@/lib/prompts";
+import { buildArticleSource, buildGenerateMessages, finalizeTelegramPost, looksLikeReasoning, type GenerateAction } from "@/lib/prompts";
 
 const MAX_CONTENT_CHARS = 6_000;
+const TELEGRAM_SOURCE_CHARS = 2_500;
 
 export type GeneratedArticle = {
   date: string | null;
@@ -21,12 +22,21 @@ export async function generateFromArticle(
     throw new ArticleFetchError("В статье нет текста для обработки.", 422);
   }
 
+  const limit = action === "telegram" ? TELEGRAM_SOURCE_CHARS : MAX_CONTENT_CHARS;
   const truncated =
-    source.length > MAX_CONTENT_CHARS
-      ? `${source.slice(0, MAX_CONTENT_CHARS)}\n\n[Текст обрезан]`
-      : source;
+    source.length > limit ? `${source.slice(0, limit)}\n\n[Текст обрезан]` : source;
 
-  const text = await completeChat(buildGenerateMessages(action, truncated, url));
+  const generated = await completeChat(buildGenerateMessages(action, truncated, url), {
+    maxTokens: action === "telegram" ? 500 : 4096,
+  });
+  const text = action === "telegram" ? finalizeTelegramPost(generated, url) : generated;
+
+  if (
+    action === "telegram" &&
+    (looksLikeReasoning(text) || text.replace(url, "").trim().length < 40)
+  ) {
+    throw new Error("Модель вернула черновик вместо поста. Нажмите кнопку ещё раз.");
+  }
 
   return {
     date: article.date,
