@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertIcon, AlertTitle } from "@/components/ui/alert";
 import { messageForCode, messageFromApiPayload, type ErrorCode } from "@/lib/errors";
 
@@ -36,6 +36,9 @@ const PROCESS_STATUSES: Record<Action, string> = {
   telegram: "Загружаю статью… Пишу пост для Telegram…",
 };
 
+const secondaryButtonClass =
+  "rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-100 transition hover:border-amber-400/70 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50";
+
 function isHttpUrl(value: string): boolean {
   try {
     const url = new URL(value);
@@ -56,9 +59,64 @@ export function ReferentForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const resultRef = useRef<HTMLDivElement>(null);
+  const shouldScrollRef = useRef(false);
+  const copyTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!shouldScrollRef.current || !result) return;
+
+    shouldScrollRef.current = false;
+    resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [result]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
 
   function showError(code: ErrorCode) {
     setError(messageForCode(code));
+  }
+
+  function clearAll() {
+    setUrl("");
+    setActiveAction(null);
+    setLoading(false);
+    setError("");
+    setResult("");
+    setCopied(false);
+    shouldScrollRef.current = false;
+
+    if (copyTimerRef.current !== null) {
+      window.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = null;
+    }
+  }
+
+  async function copyResult() {
+    if (!result) return;
+
+    try {
+      await navigator.clipboard.writeText(result);
+      setCopied(true);
+
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+
+      copyTimerRef.current = window.setTimeout(() => {
+        setCopied(false);
+        copyTimerRef.current = null;
+      }, 2000);
+    } catch {
+      showError("UNKNOWN");
+    }
   }
 
   async function runAction(action: Action) {
@@ -78,6 +136,7 @@ export function ReferentForm() {
     setActiveAction(action);
     setLoading(true);
     setResult("");
+    setCopied(false);
 
     try {
       const response = await fetch("/api/generate", {
@@ -105,6 +164,7 @@ export function ReferentForm() {
         return;
       }
 
+      shouldScrollRef.current = true;
       setResult(text);
     } catch {
       showError("NETWORK");
@@ -171,6 +231,16 @@ export function ReferentForm() {
             );
           })}
         </div>
+
+        <button
+          type="button"
+          title="Сбросить поле URL, результат и ошибки"
+          disabled={loading}
+          onClick={clearAll}
+          className={secondaryButtonClass}
+        >
+          Очистить
+        </button>
       </form>
 
       {processStatus ? (
@@ -183,14 +253,29 @@ export function ReferentForm() {
         </div>
       ) : null}
 
-      <div className="min-h-56 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-sm font-medium text-zinc-400">Результат</h2>
-          {activeAction && !loading ? (
-            <span className="text-xs text-amber-400">
-              {ACTION_TITLES[activeAction]}
-            </span>
-          ) : null}
+      <div
+        ref={resultRef}
+        className="min-h-56 scroll-mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5"
+      >
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-medium text-zinc-400">Результат</h2>
+            {activeAction && !loading ? (
+              <span className="text-xs text-amber-400">
+                {ACTION_TITLES[activeAction]}
+              </span>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            title="Скопировать результат"
+            disabled={!result || loading}
+            onClick={() => void copyResult()}
+            className={secondaryButtonClass}
+          >
+            {copied ? "Скопировано" : "Копировать"}
+          </button>
         </div>
 
         {result ? (
