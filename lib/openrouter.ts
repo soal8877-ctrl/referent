@@ -51,7 +51,7 @@ export async function completeChat(
     throw new AppError("AI_CONFIG", 500);
   }
 
-  let lastCode: "AI_UNAVAILABLE" | "AI_RATE_LIMIT" | "AI_EMPTY" | "AI_CONFIG" = "AI_UNAVAILABLE";
+  let lastCode: "AI_UNAVAILABLE" | "AI_RATE_LIMIT" | "AI_EMPTY" = "AI_UNAVAILABLE";
 
   for (const model of FREE_MODELS) {
     try {
@@ -62,9 +62,13 @@ export async function completeChat(
       lastCode = "AI_EMPTY";
     } catch (error) {
       if (error instanceof AppError) {
-        lastCode = error.code as typeof lastCode;
         if (error.code === "AI_CONFIG") {
           throw error;
+        }
+        if (error.code === "AI_RATE_LIMIT" || error.code === "AI_EMPTY" || error.code === "AI_UNAVAILABLE") {
+          lastCode = error.code;
+        } else {
+          lastCode = "AI_UNAVAILABLE";
         }
       } else {
         lastCode = "AI_UNAVAILABLE";
