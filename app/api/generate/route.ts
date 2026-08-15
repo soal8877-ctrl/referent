@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { ArticleFetchError, isHttpUrl } from "@/lib/fetchArticle";
+import { AppError, messageForCode } from "@/lib/errors";
+import { isHttpUrl } from "@/lib/fetchArticle";
 import { generateFromArticle } from "@/lib/generateFromArticle";
 import { isGenerateAction } from "@/lib/prompts";
 
@@ -18,40 +19,40 @@ function readBody(body: unknown): { url: string; action: unknown } {
   return { url, action };
 }
 
+function errorResponse(error: AppError) {
+  return NextResponse.json(
+    { code: error.code, error: messageForCode(error.code) },
+    { status: error.status },
+  );
+}
+
 export async function POST(request: Request) {
   let body: unknown;
 
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Нужен JSON с полями url и action." }, { status: 400 });
+    return errorResponse(new AppError("VALIDATION_BODY", 400));
   }
 
   const { url, action } = readBody(body);
 
   if (!url || !isHttpUrl(url)) {
-    return NextResponse.json(
-      { error: "Нужна ссылка вида https://example.com/article" },
-      { status: 400 },
-    );
+    return errorResponse(new AppError("VALIDATION_URL", 400));
   }
 
   if (!isGenerateAction(action)) {
-    return NextResponse.json(
-      { error: "Нужно действие: summary, theses или telegram." },
-      { status: 400 },
-    );
+    return errorResponse(new AppError("VALIDATION_ACTION", 400));
   }
 
   try {
     const result = await generateFromArticle(url, action);
     return NextResponse.json(result);
   } catch (error) {
-    if (error instanceof ArticleFetchError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof AppError) {
+      return errorResponse(error);
     }
 
-    const message = error instanceof Error ? error.message : "Не удалось обработать статью.";
-    return NextResponse.json({ error: message }, { status: 502 });
+    return errorResponse(new AppError("UNKNOWN", 502));
   }
 }

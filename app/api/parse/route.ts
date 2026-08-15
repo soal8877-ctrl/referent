@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
-import { ArticleFetchError, fetchArticle, isHttpUrl } from "@/lib/fetchArticle";
+import { AppError, messageForCode } from "@/lib/errors";
+import { fetchArticle, isHttpUrl } from "@/lib/fetchArticle";
 
 export const runtime = "nodejs";
+
+function errorResponse(error: AppError) {
+  return NextResponse.json(
+    { code: error.code, error: messageForCode(error.code) },
+    { status: error.status },
+  );
+}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -9,7 +17,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Нужен JSON с полем url." }, { status: 400 });
+    return errorResponse(new AppError("VALIDATION_BODY", 400));
   }
 
   const url =
@@ -18,20 +26,17 @@ export async function POST(request: Request) {
       : "";
 
   if (!url || !isHttpUrl(url)) {
-    return NextResponse.json(
-      { error: "Нужна ссылка вида https://example.com/article" },
-      { status: 400 },
-    );
+    return errorResponse(new AppError("VALIDATION_URL", 400));
   }
 
   try {
     const article = await fetchArticle(url);
     return NextResponse.json(article);
   } catch (error) {
-    if (error instanceof ArticleFetchError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof AppError) {
+      return errorResponse(error);
     }
 
-    return NextResponse.json({ error: "Не удалось разобрать страницу." }, { status: 502 });
+    return errorResponse(new AppError("UNKNOWN", 502));
   }
 }

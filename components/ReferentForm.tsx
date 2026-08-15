@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { Alert, AlertDescription, AlertIcon, AlertTitle } from "@/components/ui/alert";
+import { messageForCode, messageFromApiPayload, type ErrorCode } from "@/lib/errors";
 
 type Action = "summary" | "theses" | "telegram";
 
@@ -43,12 +45,6 @@ function isHttpUrl(value: string): boolean {
   }
 }
 
-function errorMessage(data: unknown, fallback: string): string {
-  return typeof data === "object" && data && "error" in data && typeof data.error === "string"
-    ? data.error
-    : fallback;
-}
-
 function resultFrom(data: unknown): string {
   if (typeof data !== "object" || !data) return "";
   return "text" in data && typeof data.text === "string" ? data.text.trim() : "";
@@ -61,16 +57,20 @@ export function ReferentForm() {
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
 
+  function showError(code: ErrorCode) {
+    setError(messageForCode(code));
+  }
+
   async function runAction(action: Action) {
     const trimmed = url.trim();
 
     if (!trimmed) {
-      setError("Вставьте адрес статьи.");
+      showError("VALIDATION_URL");
       return;
     }
 
     if (!isHttpUrl(trimmed)) {
-      setError("Нужна ссылка вида https://example.com/article");
+      showError("VALIDATION_URL");
       return;
     }
 
@@ -86,17 +86,28 @@ export function ReferentForm() {
         body: JSON.stringify({ url: trimmed, action }),
       });
 
-      const data: unknown = await response.json();
+      let data: unknown = null;
+      try {
+        data = await response.json();
+      } catch {
+        showError("UNKNOWN");
+        return;
+      }
 
       if (!response.ok) {
-        setError(errorMessage(data, "Не удалось обработать статью."));
+        setError(messageFromApiPayload(data, response.status));
         return;
       }
 
       const text = resultFrom(data);
-      setResult(text || "Модель не вернула ответ.");
+      if (!text) {
+        showError("AI_EMPTY");
+        return;
+      }
+
+      setResult(text);
     } catch {
-      setError("Не удалось связаться с сервером генерации.");
+      showError("NETWORK");
     } finally {
       setLoading(false);
     }
@@ -131,9 +142,11 @@ export function ReferentForm() {
         </label>
 
         {error ? (
-          <p className="text-sm text-rose-400" role="alert">
-            {error}
-          </p>
+          <Alert variant="destructive">
+            <AlertIcon />
+            <AlertTitle>Ошибка</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         ) : null}
 
         <div className="grid gap-3 sm:grid-cols-3">

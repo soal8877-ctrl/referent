@@ -1,19 +1,10 @@
+import { AppError } from "@/lib/errors";
 import { parseArticleHtml, type ParsedArticle } from "@/lib/parseArticle";
 
 export type { ParsedArticle };
 
 const MAX_HTML_BYTES = 2_000_000;
 const FETCH_TIMEOUT_MS = 15_000;
-
-export class ArticleFetchError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
-    super(message);
-    this.name = "ArticleFetchError";
-  }
-}
 
 export function isHttpUrl(value: string): boolean {
   try {
@@ -38,28 +29,23 @@ export async function fetchArticle(url: string): Promise<ParsedArticle> {
       },
       redirect: "follow",
     });
-  } catch (error) {
-    const aborted =
-      error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
-    throw new ArticleFetchError(
-      aborted ? "Сайт не ответил вовремя." : "Не удалось разобрать страницу.",
-      502,
-    );
+  } catch {
+    throw new AppError("ARTICLE_FETCH", 502);
   }
 
   if (!response.ok) {
-    throw new ArticleFetchError(`Не удалось загрузить статью (${response.status}).`, 502);
+    throw new AppError("ARTICLE_FETCH", response.status >= 400 ? response.status : 502);
   }
 
   const html = await response.text();
   if (html.length > MAX_HTML_BYTES) {
-    throw new ArticleFetchError("Страница слишком большая для разбора.", 413);
+    throw new AppError("ARTICLE_TOO_LARGE", 413);
   }
 
   const article = parseArticleHtml(html);
 
   if (!article.title && !article.content) {
-    throw new ArticleFetchError("Не удалось найти заголовок и текст статьи.", 422);
+    throw new AppError("ARTICLE_EMPTY", 422);
   }
 
   return article;

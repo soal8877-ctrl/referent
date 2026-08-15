@@ -1,6 +1,13 @@
-import { ArticleFetchError, fetchArticle } from "@/lib/fetchArticle";
+import { AppError } from "@/lib/errors";
+import { fetchArticle } from "@/lib/fetchArticle";
 import { completeChat } from "@/lib/openrouter";
-import { buildArticleSource, buildGenerateMessages, finalizeTelegramPost, looksLikeReasoning, type GenerateAction } from "@/lib/prompts";
+import {
+  buildArticleSource,
+  buildGenerateMessages,
+  finalizeTelegramPost,
+  looksLikeReasoning,
+  type GenerateAction,
+} from "@/lib/prompts";
 
 const MAX_CONTENT_CHARS = 6_000;
 const TELEGRAM_SOURCE_CHARS = 2_500;
@@ -19,7 +26,7 @@ export async function generateFromArticle(
   const source = buildArticleSource(article.title, article.content);
 
   if (!source) {
-    throw new ArticleFetchError("В статье нет текста для обработки.", 422);
+    throw new AppError("ARTICLE_EMPTY", 422);
   }
 
   const limit = action === "telegram" ? TELEGRAM_SOURCE_CHARS : MAX_CONTENT_CHARS;
@@ -35,7 +42,7 @@ export async function generateFromArticle(
     action === "telegram" &&
     (looksLikeReasoning(text) || text.replace(url, "").trim().length < 40)
   ) {
-    throw new Error("Модель вернула черновик вместо поста. Нажмите кнопку ещё раз.");
+    throw new AppError("AI_BAD_OUTPUT", 502);
   }
 
   return {
