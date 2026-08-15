@@ -4,10 +4,22 @@ import { FormEvent, useState } from "react";
 
 type Action = "summary" | "theses" | "telegram";
 
-const ACTIONS: { id: Action; label: string }[] = [
-  { id: "summary", label: "О чем статья?" },
-  { id: "theses", label: "Тезисы" },
-  { id: "telegram", label: "Пост для Telegram" },
+const ACTIONS: { id: Action; label: string; title: string }[] = [
+  {
+    id: "summary",
+    label: "О чем статья?",
+    title: "Кратко пересказать, о чём статья",
+  },
+  {
+    id: "theses",
+    label: "Тезисы",
+    title: "Выписать главные тезисы статьи списком",
+  },
+  {
+    id: "telegram",
+    label: "Пост для Telegram",
+    title: "Сделать короткий пост для Telegram со ссылкой на источник",
+  },
 ];
 
 const ACTION_TITLES: Record<Action, string> = {
@@ -16,10 +28,10 @@ const ACTION_TITLES: Record<Action, string> = {
   telegram: "Пост для Telegram",
 };
 
-const LOADING_STATUSES: Record<Action, string> = {
-  summary: "Краткое содержание…",
-  theses: "Сбор тезисов…",
-  telegram: "Черновик поста…",
+const PROCESS_STATUSES: Record<Action, string> = {
+  summary: "Загружаю статью… Готовлю краткое содержание…",
+  theses: "Загружаю статью… Собираю тезисы…",
+  telegram: "Загружаю статью… Пишу пост для Telegram…",
 };
 
 function isHttpUrl(value: string): boolean {
@@ -94,6 +106,9 @@ export function ReferentForm() {
     event.preventDefault();
   }
 
+  const processStatus =
+    loading && activeAction ? PROCESS_STATUSES[activeAction] : null;
+
   return (
     <section className="flex flex-col gap-6">
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -106,10 +121,13 @@ export function ReferentForm() {
             name="url"
             value={url}
             onChange={(event) => setUrl(event.target.value)}
-            placeholder="https://example.com/article"
+            placeholder="Введите URL статьи, например: https://example.com/article"
             autoComplete="url"
             className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-zinc-100 placeholder:text-zinc-500 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30"
           />
+          <span className="text-xs text-zinc-500">
+            Укажите ссылку на англоязычную статью
+          </span>
         </label>
 
         {error ? (
@@ -126,6 +144,7 @@ export function ReferentForm() {
               <button
                 key={item.id}
                 type="button"
+                title={item.title}
                 disabled={loading}
                 onClick={() => void runAction(item.id)}
                 className={`rounded-xl border px-4 py-3 text-sm font-medium transition disabled:cursor-wait disabled:opacity-60 ${
@@ -141,21 +160,27 @@ export function ReferentForm() {
         </div>
       </form>
 
+      {processStatus ? (
+        <div
+          className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-300"
+          role="status"
+          aria-live="polite"
+        >
+          {processStatus}
+        </div>
+      ) : null}
+
       <div className="min-h-56 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-sm font-medium text-zinc-400">Результат</h2>
-          {activeAction ? (
+          {activeAction && !loading ? (
             <span className="text-xs text-amber-400">
               {ACTION_TITLES[activeAction]}
             </span>
           ) : null}
         </div>
 
-        {loading ? (
-          <p className="text-zinc-300">
-            {activeAction ? LOADING_STATUSES[activeAction] : "Генерация ответа…"}
-          </p>
-        ) : result ? (
+        {result ? (
           <pre className="overflow-x-auto whitespace-pre-wrap font-sans text-base leading-7 text-zinc-100">
             {result}
           </pre>
