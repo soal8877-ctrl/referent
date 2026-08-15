@@ -1,1 +1,9 @@
 @import "tailwindcss" source("../");
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+}

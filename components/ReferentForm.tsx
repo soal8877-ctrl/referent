@@ -181,9 +181,9 @@ export function ReferentForm() {
     loading && activeAction ? PROCESS_STATUSES[activeAction] : null;
 
   return (
-    <section className="flex flex-col gap-6">
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-2">
+    <section className="flex w-full min-w-0 flex-col gap-5 sm:gap-6">
+      <form onSubmit={onSubmit} className="flex w-full min-w-0 flex-col gap-4">
+        <label className="flex min-w-0 flex-col gap-2">
           <span className="text-sm font-medium text-zinc-300">
             URL англоязычной статьи
           </span>
@@ -194,22 +194,22 @@ export function ReferentForm() {
             onChange={(event) => setUrl(event.target.value)}
             placeholder="Введите URL статьи, например: https://example.com/article"
             autoComplete="url"
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-zinc-100 placeholder:text-zinc-500 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30"
+            className="w-full min-w-0 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-3 text-base text-zinc-100 placeholder:text-zinc-500 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 sm:px-4"
           />
-          <span className="text-xs text-zinc-500">
+          <span className="text-xs leading-relaxed text-zinc-500">
             Укажите ссылку на англоязычную статью
           </span>
         </label>
 
         {error ? (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="min-w-0 break-words">
             <AlertIcon />
             <AlertTitle>Ошибка</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="break-words">{error}</AlertDescription>
           </Alert>
         ) : null}
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-3">
           {ACTIONS.map((item) => {
             const selected = activeAction === item.id && !loading;
 
@@ -220,7 +220,7 @@ export function ReferentForm() {
                 title={item.title}
                 disabled={loading}
                 onClick={() => void runAction(item.id)}
-                className={`rounded-xl border px-4 py-3 text-sm font-medium transition disabled:cursor-wait disabled:opacity-60 ${
+                className={`w-full rounded-xl border px-4 py-3 text-sm font-medium transition disabled:cursor-wait disabled:opacity-60 ${
                   selected
                     ? "border-amber-400 bg-amber-400 text-zinc-950"
                     : "border-zinc-700 bg-zinc-900 text-zinc-100 hover:border-amber-400/70 hover:bg-zinc-800"
@@ -237,7 +237,7 @@ export function ReferentForm() {
           title="Сбросить поле URL, результат и ошибки"
           disabled={loading}
           onClick={clearAll}
-          className={secondaryButtonClass}
+          className={`w-full ${secondaryButtonClass}`}
         >
           Очистить
         </button>
@@ -245,7 +245,7 @@ export function ReferentForm() {
 
       {processStatus ? (
         <div
-          className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-300"
+          className="w-full min-w-0 break-words rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm leading-relaxed text-zinc-300"
           role="status"
           aria-live="polite"
         >
@@ -255,10 +255,10 @@ export function ReferentForm() {
 
       <div
         ref={resultRef}
-        className="min-h-56 scroll-mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5"
+        className="min-h-48 w-full min-w-0 scroll-mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 sm:min-h-56 sm:p-5"
       >
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
             <h2 className="text-sm font-medium text-zinc-400">Результат</h2>
             {activeAction && !loading ? (
               <span className="text-xs text-amber-400">
@@ -272,18 +272,18 @@ export function ReferentForm() {
             title="Скопировать результат"
             disabled={!result || loading}
             onClick={() => void copyResult()}
-            className={secondaryButtonClass}
+            className={`w-full shrink-0 sm:w-auto ${secondaryButtonClass}`}
           >
             {copied ? "Скопировано" : "Копировать"}
           </button>
         </div>
 
         {result ? (
-          <pre className="overflow-x-auto whitespace-pre-wrap font-sans text-base leading-7 text-zinc-100">
+          <pre className="max-w-full overflow-x-auto whitespace-pre-wrap break-words font-sans text-sm leading-7 text-zinc-100 sm:text-base">
             {result}
           </pre>
         ) : (
-          <p className="text-zinc-500">
+          <p className="text-sm leading-relaxed text-zinc-500 sm:text-base">
             Вставьте ссылку и нажмите одну из кнопок — ответ появится здесь.
           </p>
         )}
