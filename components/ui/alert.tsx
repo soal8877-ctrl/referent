@@ -8,9 +8,9 @@ const alertVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-zinc-900 text-zinc-100 border-zinc-700",
+        default: "bg-card text-foreground border-border",
         destructive:
-          "bg-rose-950/50 text-rose-100 border-rose-800/80 [&>svg]:text-rose-400",
+          "bg-rose-50 text-rose-900 border-rose-200 [&>svg]:text-rose-600 dark:bg-rose-950/50 dark:text-rose-100 dark:border-rose-800/80 dark:[&>svg]:text-rose-400",
       },
     },
     defaultVariants: {
@@ -49,7 +49,7 @@ function AlertDescription({ className, ...props }: React.ComponentProps<"div">) 
     <div
       data-slot="alert-description"
       className={cn(
-        "text-sm text-rose-100/90 col-start-2 grid min-w-0 justify-items-start gap-1 break-words [&_p]:leading-relaxed",
+        "text-sm col-start-2 grid min-w-0 justify-items-start gap-1 break-words text-rose-800 dark:text-rose-100/90 [&_p]:leading-relaxed",
         className,
       )}
       {...props}

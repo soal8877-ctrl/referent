@@ -37,7 +37,7 @@ const PROCESS_STATUSES: Record<Action, string> = {
 };
 
 const secondaryButtonClass =
-  "rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-100 transition hover:border-amber-400/70 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50";
+  "rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition hover:border-amber-400/70 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-zinc-800";
 
 function isHttpUrl(value: string): boolean {
   try {
@@ -184,7 +184,7 @@ export function ReferentForm() {
     <section className="flex w-full min-w-0 flex-col gap-5 sm:gap-6">
       <form onSubmit={onSubmit} className="flex w-full min-w-0 flex-col gap-4">
         <label className="flex min-w-0 flex-col gap-2">
-          <span className="text-sm font-medium text-zinc-300">
+          <span className="text-sm font-medium text-muted">
             URL англоязычной статьи
           </span>
           <input
@@ -194,9 +194,9 @@ export function ReferentForm() {
             onChange={(event) => setUrl(event.target.value)}
             placeholder="Введите URL статьи, например: https://example.com/article"
             autoComplete="url"
-            className="w-full min-w-0 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-3 text-base text-zinc-100 placeholder:text-zinc-500 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 sm:px-4"
+            className="w-full min-w-0 rounded-xl border border-border bg-input px-3 py-3 text-base text-foreground placeholder:text-muted-foreground outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 sm:px-4"
           />
-          <span className="text-xs leading-relaxed text-zinc-500">
+          <span className="text-xs leading-relaxed text-muted-foreground">
             Укажите ссылку на англоязычную статью
           </span>
         </label>
@@ -223,7 +223,7 @@ export function ReferentForm() {
                 className={`w-full rounded-xl border px-4 py-3 text-sm font-medium transition disabled:cursor-wait disabled:opacity-60 ${
                   selected
                     ? "border-amber-400 bg-amber-400 text-zinc-950"
-                    : "border-zinc-700 bg-zinc-900 text-zinc-100 hover:border-amber-400/70 hover:bg-zinc-800"
+                    : "border-border bg-card text-foreground hover:border-amber-400/70 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                 }`}
               >
                 {item.label}
@@ -245,7 +245,7 @@ export function ReferentForm() {
 
       {processStatus ? (
         <div
-          className="w-full min-w-0 break-words rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm leading-relaxed text-zinc-300"
+          className="w-full min-w-0 break-words rounded-xl border border-border bg-card-soft px-4 py-3 text-sm leading-relaxed text-muted"
           role="status"
           aria-live="polite"
         >
@@ -255,13 +255,13 @@ export function ReferentForm() {
 
       <div
         ref={resultRef}
-        className="min-h-48 w-full min-w-0 scroll-mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 sm:min-h-56 sm:p-5"
+        className="min-h-48 w-full min-w-0 scroll-mt-6 rounded-2xl border border-border bg-card-soft p-4 sm:min-h-56 sm:p-5"
       >
         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
-            <h2 className="text-sm font-medium text-zinc-400">Результат</h2>
+            <h2 className="text-sm font-medium text-muted">Результат</h2>
             {activeAction && !loading ? (
-              <span className="text-xs text-amber-400">
+              <span className="text-xs text-amber-600 dark:text-amber-400">
                 {ACTION_TITLES[activeAction]}
               </span>
             ) : null}
@@ -279,11 +279,11 @@ export function ReferentForm() {
         </div>
 
         {result ? (
-          <pre className="max-w-full overflow-x-auto whitespace-pre-wrap break-words font-sans text-sm leading-7 text-zinc-100 sm:text-base">
+          <pre className="max-w-full overflow-x-auto whitespace-pre-wrap break-words font-sans text-sm leading-7 text-foreground sm:text-base">
             {result}
           </pre>
         ) : (
-          <p className="text-sm leading-relaxed text-zinc-500 sm:text-base">
+          <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
             Вставьте ссылку и нажмите одну из кнопок — ответ появится здесь.
           </p>
         )}
